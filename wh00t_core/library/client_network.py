@@ -3,7 +3,7 @@
 import os
 import time
 import ast
-from typing import List, Any, NoReturn, Optional
+from typing import List, Any, NoReturn, Optional, Callable
 from socket import AF_INET, socket, SOCK_STREAM
 from .utils import package_data
 
@@ -12,7 +12,8 @@ class ClientNetwork:
     BUFFER_SIZE: int = 1024
     message_history: List[dict] = []
 
-    def __init__(self, host: str, port: int, app_id: str, app_profile: str, logging_object: Optional = None) -> NoReturn:
+    def __init__(self, host: str, port: int, app_id: str, app_profile: str,
+                 logging_object: Optional = None) -> NoReturn:
 
         if logging_object:
             self.logger = logging_object.getLogger(type(self).__name__)
@@ -62,7 +63,7 @@ class ClientNetwork:
             self.client_socket.close()
             os._exit(1)
 
-    def receive(self) -> NoReturn:
+    def receive(self, call_back: Optional[Callable] = None) -> NoReturn:
         while self.client_socket:
             try:
                 message: str = self.client_socket.recv(self.BUFFER_SIZE).decode('utf8', errors='replace')
@@ -71,6 +72,8 @@ class ClientNetwork:
                 self.message_history.append(package)
                 self.__trim_message_history()
                 self.log('INFO', f'Received Message: {str(package)}')
+                if call_back:
+                    call_back(package)
             except OSError as os_error:  # Possibly client has left the chat.
                 self.log('ERROR', f'Received OSError: {(str(os_error))}')
                 break
