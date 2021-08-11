@@ -4,7 +4,7 @@ import os
 import time
 from typing import List, Any, NoReturn, Optional, Callable
 from socket import AF_INET, socket, SOCK_STREAM
-from .utils import byte_package, unpack_data
+from .utils import NetworkUtils
 
 
 class ClientNetwork:
@@ -43,8 +43,8 @@ class ClientNetwork:
             self.log('INFO', f'Attempting socket connection to {self.address}')
             self.client_socket: Any = socket(AF_INET, SOCK_STREAM)
             self.client_socket.connect(self.address)
-            package: bytes = byte_package(self.app_id, self.app_profile, f'{self.app_id}_connect', '')
-            self.client_socket.send(package)
+            self.client_socket.send(NetworkUtils.byte_package(self.app_id, self.app_profile,
+                                                              f'{self.app_id}_connect', ''))
             self.log('INFO', f'Connection to {self.address} has succeeded')
         except ConnectionRefusedError as connection_refused_error:
             self.log('ERROR', f'Received ConnectionRefusedError: {(str(connection_refused_error))}')
@@ -55,8 +55,8 @@ class ClientNetwork:
 
     def send_message(self, message_category: str, message: str) -> NoReturn:
         try:
-            packaged_message: bytes = byte_package(self.app_id, self.app_profile, message_category, message)
-            self.client_socket.send(packaged_message)
+            self.client_socket.send(NetworkUtils.byte_package(self.app_id, self.app_profile,
+                                                              message_category, message))
         except IOError as io_error:
             self.log('ERROR', f'Received IOError: {(str(io_error))}')
             self.client_socket.close()
@@ -65,8 +65,8 @@ class ClientNetwork:
     def receive(self, call_back: Optional[Callable] = None) -> NoReturn:
         while self.client_socket:
             try:
-                message: str = self.client_socket.recv(self.BUFFER_SIZE).decode('utf8', errors='replace')
-                package: dict = unpack_data(message)
+                message: str = NetworkUtils.unpack_byte(self.client_socket.recv(self.BUFFER_SIZE))
+                package: dict = NetworkUtils.unpack_data(message)
                 self.number_of_messages += 1
                 self.message_history.append(package)
                 self.__trim_message_history()
