@@ -1,5 +1,6 @@
 from datetime import datetime
 import time
+import ast
 
 
 def package_data(client_id: str, client_profile: str, message_category: str, message: str) -> str:
@@ -10,6 +11,14 @@ def package_data(client_id: str, client_profile: str, message_category: str, mes
         'category': message_category,
         'message': message
     })
+
+
+def unpack_data(message: str) -> dict:
+    return ast.literal_eval(message)
+
+
+def byte_package(client_id: str, client_profile: str, message_category: str, message: str) -> bytes:
+    return bytes(package_data(client_id, client_profile, message_category, message), 'utf8')
 
 
 def message_time() -> str:
