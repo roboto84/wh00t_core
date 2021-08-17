@@ -7,6 +7,7 @@ import re
 
 class NetworkUtils:
     MESSAGE_ENCODING: str = 'utf8'
+    BUFFER_SIZE: int = 1024
 
     @staticmethod
     def package_data(client_id: str, client_profile: str, message_category: str, message: str) -> str:

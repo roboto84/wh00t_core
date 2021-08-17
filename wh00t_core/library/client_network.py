@@ -2,13 +2,12 @@
 
 import os
 import time
-from typing import List, Any, NoReturn, Optional, Callable
+from typing import List, Any, Optional, Callable
 from socket import AF_INET, socket, SOCK_STREAM
-from .utils import NetworkUtils
+from .network_utils import NetworkUtils
 
 
 class ClientNetwork:
-    BUFFER_SIZE: int = 1024
     message_history: List[dict] = []
 
     def __init__(self, host: str, port: int, app_id: str, app_profile: str, logging_object: Optional = None):
@@ -64,7 +63,7 @@ class ClientNetwork:
     def receive(self, call_back: Optional[Callable] = None) -> None:
         while self.client_socket:
             try:
-                message: str = NetworkUtils.unpack_byte(self.client_socket.recv(self.BUFFER_SIZE))
+                message: str = NetworkUtils.unpack_byte(self.client_socket.recv(NetworkUtils.BUFFER_SIZE))
                 packages: List[dict] = NetworkUtils.unpack_data(message)
                 self.number_of_messages += len(packages)
 
