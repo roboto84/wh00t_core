@@ -1,5 +1,5 @@
 # Wh00t Socket Client Network Class
-
+import logging
 import os
 import time
 from typing import List, Any, Optional, Callable
@@ -13,17 +13,21 @@ class ClientNetwork:
     def __init__(self, host: str, port: int, app_id: str, app_profile: str, logging_object: Optional = None):
 
         if logging_object:
-            self.logger = logging_object.getLogger(type(self).__name__)
+            self.logger: Optional[logging.Logger] = logging_object.getLogger(type(self).__name__)
             self.logger.setLevel(logging_object.INFO)
         else:
-            self.logger = None
+            self.logger: Optional[logging.Logger] = None
 
         self.number_of_messages: int = 0
-        self.client_socket: Any = None
+        self.client_socket: Optional[socket] = None
         self.client_socket_error: bool = False
         self.address: tuple = (host, port)
         self.app_id: str = app_id
         self.app_profile: str = app_profile
+
+    @staticmethod
+    def get_version() -> str:
+        return NetworkUtils.get_version()
 
     def log(self, log_type: str, message: str) -> None:
         if self.logger:
@@ -60,7 +64,7 @@ class ClientNetwork:
             self.client_socket.close()
             os._exit(1)
 
-    def receive(self, call_back: Optional[Callable] = None) -> None:
+    def receive(self, call_back_comparator: Optional[Callable[[dict], bool]] = None) -> None:
         while self.client_socket:
             try:
                 message: str = NetworkUtils.unpack_byte(self.client_socket.recv(NetworkUtils.BUFFER_SIZE))
@@ -71,8 +75,8 @@ class ClientNetwork:
                     self.message_history.append(package)
                     self.__trim_message_history()
                     self.log('INFO', f'Received Message: {str(package)}')
-                    if call_back:
-                        if not call_back(package):
+                    if call_back_comparator:
+                        if not call_back_comparator(package):
                             return
             except OSError as os_error:  # Possibly client has left the chat.
                 self.log('ERROR', f'Received OSError: {(str(os_error))}')
