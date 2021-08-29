@@ -57,8 +57,11 @@ class ClientNetwork:
 
     def send_message(self, message_category: str, message: str) -> None:
         try:
-            self.client_socket.send(NetworkUtils.byte_package(self.app_id, self.app_profile,
-                                                              message_category, message))
+            package_message: bytes = NetworkUtils.byte_package(self.app_id, self.app_profile, message_category, message)
+            package_byte_length: int = len(package_message)
+            buffer_percent: float = round((package_byte_length / NetworkUtils.BUFFER_SIZE) * 100, 2)
+            self.log('INFO', f'Sending: {package_byte_length}B ({buffer_percent}% of buffer)')
+            self.client_socket.send(package_message)
         except IOError as io_error:
             self.log('ERROR', f'Received IOError: {(str(io_error))}')
             self.client_socket.close()

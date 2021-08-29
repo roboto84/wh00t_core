@@ -1,6 +1,6 @@
 from datetime import datetime
 from typing import List
-from __init__ import __version__
+from .__init__ import __version__
 import time
 import ast
 import re
@@ -8,7 +8,7 @@ import re
 
 class NetworkUtils:
     MESSAGE_ENCODING: str = 'utf8'
-    BUFFER_SIZE: int = 1024
+    BUFFER_SIZE: int = 2048
 
     @staticmethod
     def get_version() -> str:
