@@ -8,7 +8,7 @@ import re
 
 class NetworkUtils:
     MESSAGE_ENCODING: str = 'utf8'
-    BUFFER_SIZE: int = 2048
+    BUFFER_SIZE: int = 4096
 
     @staticmethod
     def get_version() -> str:
