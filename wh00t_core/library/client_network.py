@@ -71,16 +71,22 @@ class ClientNetwork:
         while self.client_socket:
             try:
                 message: str = NetworkUtils.unpack_byte(self.client_socket.recv(NetworkUtils.BUFFER_SIZE))
-                packages: List[dict] = NetworkUtils.unpack_data(message)
-                self.number_of_messages += len(packages)
-
-                for package in packages:
-                    self.message_history.append(package)
-                    self.__trim_message_history()
-                    self.log('INFO', f'Received Message: {str(package)}')
+                if len(message) == 0:
+                    self.log('WARNING', 'Socket connection has dropped')
+                    self.close_it()
                     if call_back_comparator:
-                        if not call_back_comparator(package):
-                            return
+                        call_back_comparator({})
+                else:
+                    packages: List[dict] = NetworkUtils.unpack_data(message)
+                    self.number_of_messages += len(packages)
+
+                    for package in packages:
+                        self.message_history.append(package)
+                        self.__trim_message_history()
+                        self.log('INFO', f'Received Message: {str(package)}')
+                        if call_back_comparator:
+                            if not call_back_comparator(package):
+                                return
             except OSError as os_error:  # Possibly client has left the chat.
                 self.log('ERROR', f'Received OSError: {(str(os_error))}')
                 break
@@ -93,10 +99,11 @@ class ClientNetwork:
                 os._exit(1)
 
     def close_it(self) -> None:
-        time.sleep(0.25)
-        self.send_message(f'{self.app_id}_disconnect', '/exit')
-        self.client_socket.close()
-        self.client_socket = None
+        if self.client_socket:
+            time.sleep(0.25)
+            self.send_message(f'{self.app_id}_disconnect', '/exit')
+            self.client_socket.close()
+            self.client_socket = None
 
     def get_message_history(self) -> List[dict]:
         self.__trim_message_history()
