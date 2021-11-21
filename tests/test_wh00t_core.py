@@ -2,4 +2,4 @@ from wh00t_core.library import __version__
 
 
 def test_version():
-    assert __version__ == '0.2.2'
+    assert __version__ == '0.3.0'

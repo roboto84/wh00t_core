@@ -2,113 +2,114 @@
 import logging
 import os
 import time
-from typing import List, Any, Optional, Callable
+from typing import List, Optional, Callable
 from socket import AF_INET, socket, SOCK_STREAM
 from .network_utils import NetworkUtils
+from .network_commons import NetworkCommons
 
 
 class ClientNetwork:
-    message_history: List[dict] = []
+    _network_commons: NetworkCommons = NetworkCommons()
+    _network_utils: NetworkUtils = NetworkUtils()
+    _message_history: List[dict] = []
+    _number_of_messages: int = 0
+    _client_socket: Optional[socket] = None
 
-    def __init__(self, host: str, port: int, app_id: str, app_profile: str, logging_object: Optional = None):
-
+    def __init__(self, host: str, port: int, app_id: str, app_profile: str,
+                 logging_object: Optional = None):
         if logging_object:
-            self.logger: Optional[logging.Logger] = logging_object.getLogger(type(self).__name__)
-            self.logger.setLevel(logging_object.INFO)
+            self._logger: Optional[logging.Logger] = logging_object.getLogger(type(self).__name__)
+            self._logger.setLevel(logging_object.INFO)
         else:
-            self.logger: Optional[logging.Logger] = None
-
-        self.number_of_messages: int = 0
-        self.client_socket: Optional[socket] = None
-        self.client_socket_error: bool = False
-        self.address: tuple = (host, port)
-        self.app_id: str = app_id
-        self.app_profile: str = app_profile
+            self._logger: Optional[logging.Logger] = None
+        self._address: tuple[str, int] = (host, port)
+        self._app_id: str = app_id
+        self._app_profile: str = app_profile
 
     @staticmethod
     def get_version() -> str:
         return NetworkUtils.get_version()
 
-    def log(self, log_type: str, message: str) -> None:
-        if self.logger:
+    def _log(self, log_type: str, message: str) -> None:
+        if self._logger:
             if log_type == 'INFO':
-                self.logger.info(message)
+                self._logger.info(message)
             elif log_type == 'ERROR':
-                self.logger.error(message)
+                self._logger.error(message)
             elif log_type == 'WARNING':
-                self.logger.warning(message)
+                self._logger.warning(message)
         else:
             print(f'{log_type} - {message}')
 
     def sock_it(self) -> None:
         try:
-            self.log('INFO', f'Attempting socket connection to {self.address}')
-            self.client_socket: Any = socket(AF_INET, SOCK_STREAM)
-            self.client_socket.connect(self.address)
-            self.client_socket.send(NetworkUtils.byte_package(self.app_id, self.app_profile,
-                                                              f'{self.app_id}_connect', ''))
-            self.log('INFO', f'Connection to {self.address} has succeeded')
+            self._log('INFO', f'Attempting socket connection to {self._address}')
+            self._client_socket: socket = socket(AF_INET, SOCK_STREAM)
+            self._client_socket.connect(self._address)
+            self._client_socket.send(
+                self._network_utils.byte_package(self._app_id, self._app_profile, f'{self._app_id}_connect', ''))
+            self._log('INFO', f'Connection to {self._address} has succeeded')
         except ConnectionRefusedError as connection_refused_error:
-            self.log('ERROR', f'Received ConnectionRefusedError: {(str(connection_refused_error))}')
+            self._log('ERROR', f'Received ConnectionRefusedError: {(str(connection_refused_error))}')
             os._exit(1)
         except OSError as os_error:  # Possibly client has left the chat.
-            self.log('ERROR', f'Received an OSError: {(str(os_error))}')
+            self._log('ERROR', f'Received an OSError: {(str(os_error))}')
             os._exit(1)
 
     def send_message(self, message_category: str, message: str) -> None:
         try:
-            package_message: bytes = NetworkUtils.byte_package(self.app_id, self.app_profile, message_category, message)
-            package_byte_length: int = len(package_message)
-            buffer_percent: float = round((package_byte_length / NetworkUtils.BUFFER_SIZE) * 100, 2)
-            self.log('INFO', f'Sending: {package_byte_length}B ({buffer_percent}% of buffer)')
-            self.client_socket.send(package_message)
+            message_package: bytes = self._network_utils.byte_package(self._app_id, self._app_profile,
+                                                                      message_category, message)
+            (package_byte_length, buffer_percent) = self._network_utils.get_byte_buffer_calc(message_package)
+            self._log('INFO', f'Sending: {package_byte_length}B ({buffer_percent}% of buffer)')
+            self._client_socket.send(message_package)
         except IOError as io_error:
-            self.log('ERROR', f'Received IOError: {(str(io_error))}')
-            self.client_socket.close()
+            self._log('ERROR', f'Received IOError: {(str(io_error))}')
+            self._client_socket.close()
             os._exit(1)
 
     def receive(self, call_back_comparator: Optional[Callable[[dict], bool]] = None) -> None:
-        while self.client_socket:
+        while self._client_socket:
             try:
-                message: str = NetworkUtils.unpack_byte(self.client_socket.recv(NetworkUtils.BUFFER_SIZE))
+                message: str = self._network_utils.unpack_byte(
+                    self._client_socket.recv(self._network_commons.get_buffer_size()))
                 if len(message) == 0:
-                    self.log('WARNING', 'Socket connection has dropped')
+                    self._log('WARNING', 'Socket connection has dropped')
                     self.close_it()
                     if call_back_comparator:
                         call_back_comparator({})
                 else:
                     packages: List[dict] = NetworkUtils.unpack_data(message)
-                    self.number_of_messages += len(packages)
-
+                    self._number_of_messages += len(packages)
                     for package in packages:
-                        self.message_history.append(package)
+                        self._message_history.append(package)
                         self.__trim_message_history()
-                        self.log('INFO', f'Received Message: {str(package)}')
+                        self._log('INFO', f'Received Message: {str(package)}')
                         if call_back_comparator:
                             if not call_back_comparator(package):
                                 return
             except OSError as os_error:  # Possibly client has left the chat.
-                self.log('ERROR', f'Received OSError: {(str(os_error))}')
+                self._log('ERROR', f'Received OSError: {(str(os_error))}')
                 break
             except SyntaxError as syntax_error:
-                self.logger.error(f'Received SyntaxError: {str(syntax_error)}')
+                self._logger.error(f'Received SyntaxError: {str(syntax_error)}')
                 break
             except KeyboardInterrupt:
-                self.log('WARNING', 'Received a KeyboardInterrupt... now exiting')
+                self._log('WARNING', 'Received a KeyboardInterrupt... now exiting')
                 self.close_it()
                 os._exit(1)
 
     def close_it(self) -> None:
-        if self.client_socket:
+        if self._client_socket:
             time.sleep(0.25)
-            self.send_message(f'{self.app_id}_disconnect', '/exit')
-            self.client_socket.close()
-            self.client_socket = None
+            self.send_message(f'{self._app_id}_disconnect', self._network_commons.get_exit_command())
+            self._client_socket.close()
+            self._client_socket = None
 
     def get_message_history(self) -> List[dict]:
         self.__trim_message_history()
-        return self.message_history
+        return self._message_history
 
     def __trim_message_history(self) -> None:
-        if len(self.message_history) > 150:
-            self.message_history.pop(0)
+        if len(self._message_history) > 150:
+            self._message_history.pop(0)

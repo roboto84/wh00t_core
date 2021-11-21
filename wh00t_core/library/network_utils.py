@@ -1,5 +1,6 @@
 from datetime import datetime
-from typing import List
+from typing import List, Tuple
+from .network_commons import NetworkCommons
 from .__init__ import __version__
 import time
 import ast
@@ -7,8 +8,21 @@ import re
 
 
 class NetworkUtils:
-    MESSAGE_ENCODING: str = 'utf8'
-    BUFFER_SIZE: int = 4096
+    _network_commons: NetworkCommons = NetworkCommons()
+
+    def utf8_bytes(self, package: str) -> bytes:
+        return bytes(package, self._network_commons.get_message_encoding())
+
+    def unpack_byte(self, package: bytes) -> str:
+        return package.decode(self._network_commons.get_message_encoding(), errors='replace')
+
+    def get_byte_buffer_calc(self, message_package: bytes) -> Tuple[int, float]:
+        package_byte_length: int = len(message_package)
+        return package_byte_length, round((package_byte_length / self._network_commons.get_buffer_size()) * 100, 2)
+
+    def byte_package(self, client_id: str, client_profile: str, message_category: str, message: str) -> bytes:
+        return bytes(NetworkUtils.package_data(client_id, client_profile, message_category, message),
+                     self._network_commons.get_message_encoding())
 
     @staticmethod
     def get_version() -> str:
@@ -43,18 +57,6 @@ class NetworkUtils:
             unescaped_package = re.sub(r'\\(.)', r'\1', stripped_package)
             dict_packages.append(ast.literal_eval(unescaped_package))
         return dict_packages
-
-    @staticmethod
-    def byte_package(client_id: str, client_profile: str, message_category: str, message: str) -> bytes:
-        return bytes(NetworkUtils.package_data(client_id, client_profile, message_category, message), 'utf8')
-
-    @staticmethod
-    def utf8_bytes(package: str) -> bytes:
-        return bytes(package, NetworkUtils.MESSAGE_ENCODING)
-
-    @staticmethod
-    def unpack_byte(package: bytes) -> str:
-        return package.decode(NetworkUtils.MESSAGE_ENCODING, errors='replace')
 
     @staticmethod
     def message_time() -> str:
