@@ -2,7 +2,9 @@
 import logging
 import os
 import time
-from typing import List, Optional, Callable
+import inspect
+import asyncio
+from typing import List, Optional, Callable, Coroutine
 from socket import AF_INET, socket, SOCK_STREAM
 from .network_utils import NetworkUtils
 from .network_commons import NetworkCommons
@@ -56,10 +58,10 @@ class ClientNetwork:
             self._log('ERROR', f'Received an OSError: {(str(os_error))}')
             os._exit(1)
 
-    def send_message(self, message_category: str, message: str) -> None:
+    def send_message(self, message_category: str, message: str, client_username: Optional[str] = None) -> None:
         try:
             message_package: bytes = self._network_utils.byte_package(self._app_id, self._app_profile,
-                                                                      message_category, message)
+                                                                      message_category, message, client_username)
             (package_byte_length, buffer_percent) = self._network_utils.get_byte_buffer_calc(message_package)
             self._log('INFO', f'Sending: {package_byte_length}B ({buffer_percent}% of buffer)')
             self._client_socket.send(message_package)
@@ -68,16 +70,20 @@ class ClientNetwork:
             self._client_socket.close()
             os._exit(1)
 
-    def receive(self, call_back_comparator: Optional[Callable[[dict], bool]] = None) -> None:
+    def receive(self, call_back_comparator: Optional[Callable[[dict], bool]] or Optional[Coroutine] = None) -> None:
         while self._client_socket:
             try:
                 message: str = self._network_utils.unpack_byte(
                     self._client_socket.recv(self._network_commons.get_buffer_size()))
+                is_comparator_coroutine: bool = inspect.iscoroutinefunction(call_back_comparator)
                 if len(message) == 0:
                     self._log('WARNING', 'Socket connection has dropped')
                     self.close_it()
                     if call_back_comparator:
-                        call_back_comparator({})
+                        if is_comparator_coroutine:
+                            asyncio.get_event_loop().run_until_complete(call_back_comparator({}))
+                        else:
+                            call_back_comparator({})
                 else:
                     packages: List[dict] = NetworkUtils.unpack_data(message)
                     self._number_of_messages += len(packages)
@@ -86,7 +92,12 @@ class ClientNetwork:
                         self.__trim_message_history()
                         self._log('INFO', f'Received Message: {str(package)}')
                         if call_back_comparator:
-                            if not call_back_comparator(package):
+                            if inspect.iscoroutinefunction(call_back_comparator):
+                                comparator_result = asyncio.get_event_loop().run_until_complete(
+                                    call_back_comparator(package))
+                            else:
+                                comparator_result = call_back_comparator(package)
+                            if not comparator_result:
                                 return
             except OSError as os_error:  # Possibly client has left the chat.
                 self._log('ERROR', f'Received OSError: {(str(os_error))}')

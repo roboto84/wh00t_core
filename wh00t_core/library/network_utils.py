@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import List, Tuple
+from typing import List, Tuple, Optional
 from .network_commons import NetworkCommons
 from .__init__ import __version__
 import time
@@ -20,18 +20,26 @@ class NetworkUtils:
         package_byte_length: int = len(message_package)
         return package_byte_length, round((package_byte_length / self._network_commons.get_buffer_size()) * 100, 2)
 
-    def byte_package(self, client_id: str, client_profile: str, message_category: str, message: str) -> bytes:
-        return bytes(NetworkUtils.package_data(client_id, client_profile, message_category, message),
-                     self._network_commons.get_message_encoding())
+    def byte_package(self, client_id: str, client_profile: str, message_category: str, message: str,
+                     client_username: Optional[str] = None) -> bytes:
+        return bytes(NetworkUtils.package_data(
+            client_id,
+            client_profile,
+            message_category,
+            message,
+            client_username),
+            self._network_commons.get_message_encoding())
 
     @staticmethod
     def get_version() -> str:
         return __version__
 
     @staticmethod
-    def package_data(client_id: str, client_profile: str, message_category: str, message: str) -> str:
+    def package_data(client_id: str, client_profile: str, message_category: str,
+                     message: str, username: Optional[str] = None) -> str:
         packaged_data = str({
             'id': client_id,
+            'username': username if username else client_id,
             'profile': client_profile,
             'time': NetworkUtils.message_time(),
             'category': message_category,
