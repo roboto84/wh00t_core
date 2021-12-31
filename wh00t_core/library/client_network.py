@@ -43,13 +43,17 @@ class ClientNetwork:
         else:
             print(f'{log_type} - {message}')
 
-    def sock_it(self) -> None:
+    def sock_it(self, client_username: Optional[str] = None) -> None:
         try:
             self._log('INFO', f'Attempting socket connection to {self._address}')
             self._client_socket: socket = socket(AF_INET, SOCK_STREAM)
             self._client_socket.connect(self._address)
             self._client_socket.send(
-                self._network_utils.byte_package(self._app_id, self._app_profile, f'{self._app_id}_connect', ''))
+                self._network_utils.byte_package(self._app_id,
+                                                 self._app_profile,
+                                                 f'{self._app_id}_connect',
+                                                 '',
+                                                 client_username))
             self._log('INFO', f'Connection to {self._address} has succeeded')
         except ConnectionRefusedError as connection_refused_error:
             self._log('ERROR', f'Received ConnectionRefusedError: {(str(connection_refused_error))}')
