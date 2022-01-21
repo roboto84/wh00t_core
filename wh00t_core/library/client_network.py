@@ -126,5 +126,6 @@ class ClientNetwork:
         return self._message_history
 
     def __trim_message_history(self) -> None:
-        if len(self._message_history) > 150:
+        max_message_history: int = 35
+        if len(self._message_history) >= max_message_history:
             self._message_history.pop(0)
