@@ -43,7 +43,8 @@ class ClientNetwork:
         else:
             print(f'{log_type} - {message}')
 
-    def sock_it(self, client_username: Optional[str] = None) -> None:
+    def sock_it(self, is_wh00t_connection_essential: Optional[bool] = True,
+                client_username: Optional[str] = None) -> None:
         try:
             self._log('INFO', f'Attempting socket connection to {self._address}')
             self._client_socket: socket = socket(AF_INET, SOCK_STREAM)
@@ -57,7 +58,10 @@ class ClientNetwork:
             self._log('INFO', f'Connection to {self._address} has succeeded')
         except ConnectionRefusedError as connection_refused_error:
             self._log('ERROR', f'Received ConnectionRefusedError: {(str(connection_refused_error))}')
-            os._exit(1)
+            self._client_socket = None
+            if is_wh00t_connection_essential:
+                os._exit(1)
+            raise
         except OSError as os_error:  # Possibly client has left the chat.
             self._log('ERROR', f'Received an OSError: {(str(os_error))}')
             os._exit(1)
@@ -92,8 +96,9 @@ class ClientNetwork:
                     packages: List[dict] = NetworkUtils.unpack_data(message)
                     self._number_of_messages += len(packages)
                     for package in packages:
-                        self._message_history.append(package)
-                        self.__trim_message_history()
+                        if not self._network_commons.is_secret_message(package['message']):
+                            self._message_history.append(package)
+                            self.__trim_message_history()
                         self._log('INFO', f'Received Message: {str(package)}')
                         if call_back_comparator:
                             if inspect.iscoroutinefunction(call_back_comparator):
@@ -126,6 +131,6 @@ class ClientNetwork:
         return self._message_history
 
     def __trim_message_history(self) -> None:
-        max_message_history: int = 35
+        max_message_history: int = self._network_commons.get_message_history_limit()
         if len(self._message_history) >= max_message_history:
             self._message_history.pop(0)
