@@ -3,12 +3,12 @@
 class NetworkCommons:
     # Common Network Settings
     _MESSAGE_ENCODING: str = 'utf8'
-    _BUFFER_SIZE: int = 4096
-    _MESSAGE_HISTORY_LIMIT: int = 50
+    _BUFFER_SIZE: int = 8192
+    _MESSAGE_HISTORY_LIMIT: int = 60
 
     # Special Message String Commands
     _EXIT_COMMAND: str = '/exit'
-    _DESTRUCT_COMMAND: str = '/boom'
+    _DESTRUCT_COMMAND: str = '/secret'
 
     # Common Message Ids
     _SERVER_ID: str = 'wh00t_server'
