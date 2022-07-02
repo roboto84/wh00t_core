@@ -9,6 +9,7 @@ class NetworkCommons:
     # Special Message String Commands
     _EXIT_COMMAND: str = '/exit'
     _DESTRUCT_COMMAND: str = '/secret'
+    _HISTORY_CLEAR_COMMANDS: list[str] = ['/clear', '/c']
 
     # Common Message Ids
     _SERVER_ID: str = 'wh00t_server'
@@ -34,6 +35,9 @@ class NetworkCommons:
 
     def is_secret_message(self, message: str) -> bool:
         return self.get_destruct_command() in message
+
+    def is_history_clear_command(self, message: str) -> bool:
+        return message in self._HISTORY_CLEAR_COMMANDS
 
     def get_server_id(self):
         return self._SERVER_ID

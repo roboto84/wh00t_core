@@ -4,7 +4,7 @@ import os
 import time
 import inspect
 import asyncio
-from typing import List, Optional, Callable, Coroutine
+from typing import Optional, Callable, Coroutine
 from socket import AF_INET, socket, SOCK_STREAM
 from .network_utils import NetworkUtils
 from .network_commons import NetworkCommons
@@ -13,7 +13,7 @@ from .network_commons import NetworkCommons
 class ClientNetwork:
     _network_commons: NetworkCommons = NetworkCommons()
     _network_utils: NetworkUtils = NetworkUtils()
-    _message_history: List[dict] = []
+    _message_history: list[dict] = []
     _number_of_messages: int = 0
     _client_socket: Optional[socket] = None
 
@@ -93,12 +93,15 @@ class ClientNetwork:
                         else:
                             call_back_comparator({})
                 else:
-                    packages: List[dict] = NetworkUtils.unpack_data(message)
+                    packages: list[dict] = NetworkUtils.unpack_data(message)
                     self._number_of_messages += len(packages)
                     for package in packages:
-                        if not self._network_commons.is_secret_message(package['message']):
+                        if self._network_commons.is_history_clear_command(package['message']):
+                            self._clear_message_history()
+                            self._log('INFO', 'Message history has been cleared')
+                        elif not self._network_commons.is_secret_message(package['message']):
                             self._message_history.append(package)
-                            self.__trim_message_history()
+                            self._trim_message_history()
                         self._log('INFO', f'Received Message: {str(package)}')
                         if call_back_comparator:
                             if inspect.iscoroutinefunction(call_back_comparator):
@@ -126,11 +129,14 @@ class ClientNetwork:
             self._client_socket.close()
             self._client_socket = None
 
-    def get_message_history(self) -> List[dict]:
-        self.__trim_message_history()
+    def get_message_history(self) -> list[dict]:
+        self._trim_message_history()
         return self._message_history
 
-    def __trim_message_history(self) -> None:
+    def _trim_message_history(self) -> None:
         max_message_history: int = self._network_commons.get_message_history_limit()
         if len(self._message_history) >= max_message_history:
             self._message_history.pop(0)
+
+    def _clear_message_history(self) -> None:
+        self._message_history = []
