@@ -18,6 +18,9 @@ class NetworkCommons:
     _USER_PROFILE: str = 'user'
     _APP_PROFILE: str = 'app'
 
+    # Common Message Categories
+    _CHAT_MESSAGE_CATEGORY = 'chat_message'
+
     def get_message_encoding(self):
         return self._MESSAGE_ENCODING
 
@@ -47,3 +50,6 @@ class NetworkCommons:
 
     def get_user_profile(self):
         return self._USER_PROFILE
+
+    def get_chat_message_category(self):
+        return self._CHAT_MESSAGE_CATEGORY

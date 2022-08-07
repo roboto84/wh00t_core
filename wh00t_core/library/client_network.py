@@ -66,10 +66,11 @@ class ClientNetwork:
             self._log('ERROR', f'Received an OSError: {(str(os_error))}')
             os._exit(1)
 
-    def send_message(self, message_category: str, message: str, client_username: Optional[str] = None) -> None:
+    def send_message(self, message_category: str, message: str,
+                     client_username: Optional[str] = None, data: Optional[dict] = None) -> None:
         try:
             message_package: bytes = self._network_utils.byte_package(self._app_id, self._app_profile,
-                                                                      message_category, message, client_username)
+                                                                      message_category, message, client_username, data)
             (package_byte_length, buffer_percent) = self._network_utils.get_byte_buffer_calc(message_package)
             self._log('INFO', f'Sending: {package_byte_length}B ({buffer_percent}% of buffer)')
             self._client_socket.send(message_package)
