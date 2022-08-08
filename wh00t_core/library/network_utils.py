@@ -70,4 +70,4 @@ class NetworkUtils:
 
     @staticmethod
     def message_time() -> str:
-        return datetime.fromtimestamp(time.time()).strftime('%m/%d %H:%M')
+        return datetime.fromtimestamp(time.time()).strftime('%m/%d %H:%M:%S')
