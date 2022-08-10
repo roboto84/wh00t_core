@@ -1,8 +1,7 @@
-from datetime import datetime
 from typing import List, Tuple, Optional
+from willow_core.library.time_handler import TimeHandler
 from .network_commons import NetworkCommons
 from .__init__ import __version__
-import time
 import ast
 import re
 
@@ -70,4 +69,4 @@ class NetworkUtils:
 
     @staticmethod
     def message_time() -> str:
-        return datetime.fromtimestamp(time.time()).strftime('%m/%d %H:%M:%S')
+        return TimeHandler.get_standard_utc_time()
